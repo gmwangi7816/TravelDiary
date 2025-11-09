@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Travel Diary | George Ngugi Mwangi</title>
+
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Load Google Fonts: Inter (Body) and Playfair Display (Headings) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+
+    <!-- Load Alpine.js for interactivity (Menu, Page Switching, Filtering, Gallery) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.1/dist/cdn.min.js"></script>
+
+    <!-- Load AOS (Animate On Scroll) -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <!-- Load Swiper.js for the photo gallery carousel -->
+    <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
+
+    <!-- Load Leaflet.js (Mapping) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+    <style>
+        /* Custom scroll behavior for smooth navigation */
+        html { scroll-behavior: smooth; }
+        .font-serif-custom { font-family: 'Playfair Display', serif; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F7F3EB; /* Warm Beige Background */
+            color: #333333; /* Dark Text */
+        }
+        /* Primary Accent Color: Burnt Orange (Amber-600) */
+        .accent-primary { color: #D97706; }
+        .accent-bg-primary { background-color: #D97706; }
+        .accent-bg-primary:hover { background-color: #B45309; /* Darker Orange on hover */ }
+        /* Secondary Accent Color: Forest Green (Emerald-700) */
+        .accent-secondary { color: #047857; }
+        /* Custom map container size */
+        #map-container {
+            height: 400px;
+            width: 100%;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        /* Style for sticky sidebar on detail page */
+        @media (min-width: 1024px) {
+            .story-sidebar-sticky {
+                position: -webkit-sticky;
+                position: sticky;
+                top: 80px; /* Below the fixed header */
+            }
+        }
+    </style>
+</head>
+
+<body x-data="app()" x-init="init()" x-cloak>
+
+    <!-- Header & Navigation -->
+    <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo/Site Title -->
+                <a href="#" @click.prevent="navigate('home')" class="flex items-center text-xl font-extrabold font-serif-custom accent-primary">
+                    <i data-feather="globe" class="w-6 h-6 mr-2 accent-primary stroke-2"></i>
+                    My Travel Diary
+                </a>
+
+                <!-- Desktop Navigation -->
+                <nav class="hidden md:flex space-x-8">
+                    <a href="#" @click.prevent="navigate('home', 'home')" :class="{'accent-primary': currentPage === 'home', 'text-gray-600': currentPage !== 'home'}" class="hover:accent-primary transition duration-300 font-semibold">Home</a>
+                    <a href="#about" @click.prevent="navigate('home', 'about')" :class="{'accent-primary': currentPage === 'home', 'text-gray-600': currentPage !== 'home'}" class="hover:accent-primary transition duration-300 font-semibold">About</a>
+                    <a href="#destinations" @click.prevent="navigate('home', 'destinations')" :class="{'accent-primary': currentPage === 'home', 'text-gray-600': currentPage !== 'home'}" class="hover:accent-primary transition duration-300 font-semibold">Destinations</a>
+                    <a href="#gallery" @click.prevent="navigate('home', 'gallery')" :class="{'accent-primary': currentPage === 'home', 'text-gray-600': currentPage !== 'home'}" class="hover:accent-primary transition duration-300 font-semibold">Gallery</a>
+                    <a href="#" @click.prevent="navigate('blog-list')" :class="{'accent-primary': currentPage === 'blog-list' || currentPage === 'storyDetail', 'text-gray-600': currentPage !== 'blog-list' && currentPage !== 'storyDetail'}" class="hover:accent-primary transition duration-300 font-semibold">Travel Stories</a>
+                    <a href="#contact" @click.prevent="navigate('home', 'contact')" :class="{'accent-primary': currentPage === 'home', 'text-gray-600': currentPage !== 'home'}" class="hover:accent-primary transition duration-300 font-semibold">Contact</a>
+                </nav>
+
+                <!-- Mobile Menu Button (Alpine.js) -->
+                <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden p-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500">
+                    <i x-show="!mobileMenuOpen" data-feather="menu" class="w-6 h-6 text-gray-600"></i>
+                    <i x-show="mobileMenuOpen" data-feather="x" class="w-6 h-6 text-gray-600"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Menu (Alpine.js) -->
+        <div x-show="mobileMenuOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-90" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-90" class="md:hidden bg-white shadow-lg border-t border-gray-100">
+            <nav class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="#" @click.prevent="navigate('home'); mobileMenuOpen = false" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-amber-50 hover:accent-primary">Home</a>
+                <a href="#" @click.prevent="navigate('blog-list'); mobileMenuOpen = false" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-amber-50 hover:accent-primary">Travel Stories</a>
+                <a href="#about" @click.prevent="navigate('home', 'about'); mobileMenuOpen = false" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-amber-50 hover:accent-primary">About</a>
+                <a href="#gallery" @click.prevent="navigate('home', 'gallery'); mobileMenuOpen = false" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-amber-50 hover:accent-primary">Gallery</a>
+                <a href="#contact" @click.prevent="navigate('home', 'contact'); mobileMenuOpen = false" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-amber-50 hover:accent-primary">Contact</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- HOME VIEW: Contains Home, About, Gallery, Contact Sections -->
+        <div x-show="currentPage === 'home'" x-cloak>
+            <!-- Home Section -->
+            <section id="home" class="py-20 lg:py-32 bg-amber-50/50" data-aos="fade-up">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="lg:flex lg:items-center lg:justify-between">
+                        <div class="lg:w-1/2 mb-10 lg:mb-0" data-aos="fade-right" data-aos-delay="200">
+                            <p class="text-lg accent-primary font-semibold mb-2">Welcome to My World</p>
+                            <h1 class="text-5xl lg:text-7xl font-extrabold font-serif-custom leading-tight text-gray-900">
+                                A Journey Through <span class="accent-primary">Destinations</span>, Lifestyles & <span class="accent-secondary">Cultures</span>
+                            </h1>
+                            <p class="mt-6 text-lg text-gray-600 max-w-lg">
+                                Here, stories meet photographs to inspire your next adventure. I'm a curious wanderer who finds joy in the small things — the calm of nature, or the thrill of discovering something new.
+                            </p>
+                            <div class="mt-8 flex space-x-4">
+                                <a href="#" @click.prevent="navigate('blog-list')" class="px-6 py-3 text-white font-semibold rounded-lg shadow-xl transition duration-300 transform hover:scale-105 accent-bg-primary flex items-center">
+                                    Start Exploring Stories
+                                    <i data-feather="arrow-right" class="w-4 h-4 ml-2"></i>
+                                </a>
+                                <a href="#about" @click.prevent="navigate('home', 'about')" class="px-6 py-3 text-gray-700 font-semibold rounded-lg bg-white border border-gray-300 shadow-md transition duration-300 hover:bg-gray-50 flex items-center">
+                                    About George
+                                </a>
+                            </div>
+                        </div>
+                        <div class="lg:w-1/2 flex justify-center" data-aos="fade-left" data-aos-delay="400">
+                            <!-- Placeholder Image -->
+                            <img src="https://placehold.co/600x450/D97706/ffffff?text=Travel+Photo+Placeholder" onerror="this.src='https://placehold.co/600x450/D97706/ffffff?text=George+Ngugi+Mwangi'" alt="Traveler exploring a scenic location" class="rounded-2xl shadow-2xl object-cover transform rotate-1 transition duration-500 hover:rotate-0 hover:shadow-3xl max-w-full h-auto">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- About Me Section -->
+            <section id="about" class="py-20 lg:py-32" data-aos="fade-up">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="text-center mb-16" data-aos="fade-up">
+                        <h2 class="text-4xl lg:text-5xl font-extrabold font-serif-custom text-gray-900">🙋‍♂️ About Me</h2>
+                        <p class="mt-3 text-xl text-gray-600">The voice and lens behind My Travel Diary.</p>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-12 items-start">
+                        <div class="space-y-6" data-aos="fade-right" data-aos-delay="200">
+                            <p class="text-lg text-gray-700">
+                                Hello, I’m <strong class="text-gray-900">George Ngugi Mwangi</strong>. I come from <strong class="accent-secondary">Eldoret Town</strong>, proudly known as the home of champions. My passion for travel started early, fueled by curiosity and a love for storytelling.
+                            </p>
+                            <p class="text-lg text-gray-700">
+                                I began my professional career as a Photo Editor, traveling the world visually through images. But soon, I realized I wanted to experience those sights personally — to feel the breeze, hear the sounds, and meet the people. That passion led me to explore <strong class="accent-primary">over 22 counties in Kenya</strong> and several countries in East Africa, including Tanzania, Ethiopia, Uganda, and Rwanda.
+                            </p>
+                            <p class="text-lg text-gray-700">
+                                Apart from traveling, I enjoy <strong class="accent-secondary">camping, cycling, hiking, marathon running, and nature walks</strong>. Every story, photo, and adventure shared here is an invitation for you to see the world through my eyes.
+                            </p>
+                        </div>
+                        <div class="p-6 bg-white rounded-xl shadow-lg border border-gray-100 space-y-4" data-aos="fade-left" data-aos-delay="400">
+                            <h3 class="text-2xl font-bold font-serif-custom accent-primary">My Adventures In Numbers</h3>
+                            <div class="grid grid-cols-2 gap-4 text-center">
+                                <div class="p-4 rounded-lg bg-amber-50">
+                                    <i data-feather="map" class="w-8 h-8 mx-auto accent-primary mb-2"></i>
+                                    <p class="text-3xl font-bold font-serif-custom">22+</p>
+                                    <p class="text-sm text-gray-600">Counties Explored</p>
+                                </div>
+                                <div class="p-4 rounded-lg bg-green-50">
+                                    <i data-feather="compass" class="w-8 h-8 mx-auto accent-secondary mb-2"></i>
+                                    <p class="text-3xl font-bold font-serif-custom">4+</p>
+                                    <p class="text-sm text-gray-600">East African Nations</p>
+                                </div>
+                                <div class="p-4 rounded-lg bg-amber-50">
+                                    <i data-feather="camera" class="w-8 h-8 mx-auto accent-primary mb-2"></i>
+                                    <p class="text-3xl font-bold font-serif-custom">100s</p>
+                                    <p class="text-sm text-gray-600">Photos Taken</p>
+                                </div>
+                                <div class="p-4 rounded-lg bg-green-50">
+                                    <i data-feather="sun" class="w-8 h-8 mx-auto accent-secondary mb-2"></i>
+                                    <p class="text-3xl font-bold font-serif-custom">Life</p>
+                                    <p class="text-sm text-gray-600">Still Exploring</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Destinations & Map Section (Leaflet Integration) -->
+            <section id="destinations" class="py-20 lg:py-32 bg-white" data-aos="fade-up">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="text-center mb-16" data-aos="fade-up">
+                        <h2 class="text-4xl lg:text-5xl font-extrabold font-serif-custom text-gray-900">🌍 Featured Destinations</h2>
+                        <p class="mt-3 text-xl text-gray-600">Every destination tells a unique story.</p>
+                    </div>
+
+                    <div class="mb-12" data-aos="fade-up" data-aos-delay="200">
+                        <h3 class="text-2xl font-bold font-serif-custom mb-4 accent-primary">Where I've Been: Interactive Map</h3>
+                        <p class="text-gray-600 mb-6">Explore the regions of Kenya and East Africa that have shaped my journey. Click on the markers to see the location.</p>
+                        <!-- Map Container -->
+                        <div id="map-container"></div>
+                    </div>
+
+                    <div class="grid md:grid-cols-3 gap-8">
+                        <!-- Destination Card 1 -->
+                        <div class="bg-amber-50 p-6 rounded-xl shadow-md border border-amber-200" data-aos="zoom-in" data-aos-delay="300">
+                            <i data-feather="aperture" class="w-8 h-8 accent-primary mb-3"></i>
+                            <h4 class="text-xl font-bold font-serif-custom mb-2">Masai Mara</h4>
+                            <p class="text-gray-600">Wildlife-rich plains, the Great Migration, and stunning safari experiences.</p>
+                        </div>
+                        <!-- Destination Card 2 -->
+                        <div class="bg-amber-50 p-6 rounded-xl shadow-md border border-amber-200" data-aos="zoom-in" data-aos-delay="400">
+                            <i data-feather="cloud-snow" class="w-8 h-8 accent-primary mb-3"></i>
+                            <h4 class="text-xl font-bold font-serif-custom mb-2">Mount Kenya</h4>
+                            <p class="text-gray-600">Majestic peaks, challenging hikes, and stunning high-altitude biodiversity.</p>
+                        </div>
+                        <!-- Destination Card 3 -->
+                        <div class="bg-amber-50 p-6 rounded-xl shadow-md border border-amber-200" data-aos="zoom-in" data-aos-delay="500">
+                            <i data-feather="droplet" class="w-8 h-8 accent-primary mb-3"></i>
+                            <h4 class="text-xl font-bold font-serif-custom mb-2">Lake Victoria</h4>
+                            <p class="text-gray-600">Tranquil waters, lakeside adventures, and vibrant fishing cultures.</p>
+                        </div>
+                    </div>
+                    <div class="mt-8 flex space-x-4">
+                        <a href="#" @click.prevent="navigate('blog-list')" class="px-6 py-3 text-white font-semibold rounded-lg shadow-xl transition duration-300 transform hover:scale-105 accent-bg-primary flex items-center">
+                            Explore Stories
+                            <i data-feather="arrow-right" class="w-4 h-4 ml-2"></i>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Gallery Section (Swiper.js Integration) -->
+            <section id="gallery" class="py-20 lg:py-32 bg-gray-100" data-aos="fade-up">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="text-center mb-12" data-aos="fade-up">
+                        <h2 class="text-4xl lg:text-5xl font-extrabold font-serif-custom text-gray-900">📸 Gallery: A Glimpse Through My Lens</h2>
+                        <p class="mt-3 text-xl text-gray-600">Explore some of my favorite travel memories captured across East Africa.</p>
+                    </div>
+
+                    <!-- Swiper Carousel Container -->
+                    <div class="swiper mySwiper" data-aos="fade-up" data-aos-delay="200">
+                        <div class="swiper-wrapper">
+                            <!-- Swiper Slide 1 -->
+                            <div class="swiper-slide rounded-xl overflow-hidden shadow-2xl">
+                                <img src="https://placehold.co/800x600/047857/ffffff?text=Wildlife+Wonders" alt="Wildlife Wonders" class="w-full h-96 object-cover">
+                                <div class="p-4 bg-white">
+                                    <p class="text-lg font-semibold font-serif-custom accent-secondary">Wildlife Wonders</p>
+                                    <p class="text-sm text-gray-500">Masai Mara, Kenya</p>
+                                </div>
+                            </div>
+                            <!-- Swiper Slide 2 -->
+                            <div class="swiper-slide rounded-xl overflow-hidden shadow-2xl">
+                                <img src="https://placehold.co/800x600/D97706/ffffff?text=Mountain+View" alt="Mountain View" class="w-full h-96 object-cover">
+                                <div class="p-4 bg-white">
+                                    <p class="text-lg font-semibold font-serif-custom accent-primary">Mountain & Waterfall Views</p>
+                                    <p class="text-sm text-gray-500">Mount Kenya</p>
+                                </div>
+                            </div>
+                            <!-- Swiper Slide 3 -->
+                            <div class="swiper-slide rounded-xl overflow-hidden shadow-2xl">
+                                <img src="https://placehold.co/800x600/3B82F6/ffffff?text=Lakeside+Adventure" alt="Lakeside Adventure" class="w-full h-96 object-cover">
+                                <div class="p-4 bg-white">
+                                    <p class="text-lg font-semibold font-serif-custom text-blue-600">Lakeside Adventures</p>
+                                    <p class="text-sm text-gray-500">Lake Victoria, Kenya</p>
+                                </div>
+                            </div>
+                            <!-- Swiper Slide 4 -->
+                            <div class="swiper-slide rounded-xl overflow-hidden shadow-2xl">
+                                <img src="https://placehold.co/800x600/7C3AED/ffffff?text=People+and+Culture" alt="People and Culture" class="w-full h-96 object-cover">
+                                <div class="p-4 bg-white">
+                                    <p class="text-lg font-semibold font-serif-custom text-purple-600">People & Cultures</p>
+                                    <p class="text-sm text-gray-500">Northern Tanzania</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Add Pagination -->
+                        <div class="swiper-pagination mt-6"></div>
+                        <!-- Add Navigation -->
+                        <div class="swiper-button-next text-amber-600"></div>
+                        <div class="swiper-button-prev text-amber-600"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Contact Section -->
+            <section id="contact" class="py-20 lg:py-32" data-aos="fade-up">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="text-center mb-12" data-aos="fade-up">
+                        <h2 class="text-4xl lg:text-5xl font-extrabold font-serif-custom text-gray-900">📬 Get In Touch</h2>
+                        <p class="mt-3 text-xl text-gray-600">I'd love to connect with fellow travelers and storytellers.</p>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-12">
+                        <div class="space-y-8" data-aos="fade-right" data-aos-delay="200">
+                            <div class="flex items-start space-x-4">
+                                <i data-feather="mail" class="w-6 h-6 flex-shrink-0 accent-primary mt-1"></i>
+                                <div>
+                                    <h4 class="font-bold text-lg font-serif-custom">Email</h4>
+                                    <p class="text-gray-600">ngugiimwas@gmail.com</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-4">
+                                <i data-feather="phone" class="w-6 h-6 flex-shrink-0 accent-primary mt-1"></i>
+                                <div>
+                                    <h4 class="font-bold text-lg font-serif-custom">Phone</h4>
+                                    <p class="text-gray-600">+254 720 598989</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-4">
+                                <i data-feather="map-pin" class="w-6 h-6 flex-shrink-0 accent-primary mt-1"></i>
+                                <div>
+                                    <h4 class="font-bold text-lg font-serif-custom">Location</h4>
+                                    <p class="text-gray-600">Eldoret, Kenya</p>
+                                </div>
+                            </div>
+
+                            <div class="pt-4">
+                                <h4 class="font-bold text-lg font-serif-custom mb-3">Follow My Adventures</h4>
+                                <div class="flex space-x-6">
+                                    <a href="https://instagram.com" target="_blank" class="text-gray-500 hover:accent-primary transition duration-300">
+                                        <i data-feather="instagram" class="w-6 h-6"></i>
+                                    </a>
+                                    <a href="https://facebook.com" target="_blank" class="text-gray-500 hover:accent-primary transition duration-300">
+                                        <i data-feather="facebook" class="w-6 h-6"></i>
+                                    </a>
+                                    <a href="https://twitter.com" target="_blank" class="text-gray-500 hover:accent-primary transition duration-300">
+                                        <i data-feather="twitter" class="w-6 h-6"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contact Form (Simple Placeholder) -->
+                        <div class="p-8 bg-white rounded-xl shadow-xl" data-aos="fade-left" data-aos-delay="400">
+                            <form id="contact-form" action="#" method="POST" x-data="{ messageSent: false }">
+                                <div class="mb-4">
+                                    <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                    <input type="text" id="name" name="name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500 transition duration-150">
+                                </div>
+                                <div class="mb-4">
+                                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                    <input type="email" id="email" name="email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500 transition duration-150">
+                                </div>
+                                <div class="mb-6">
+                                    <label for="message" class="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                                    <textarea id="message" name="message" rows="4" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500 transition duration-150"></textarea>
+                                </div>
+
+                                <button type="submit" :disabled="messageSent"
+                                    class="w-full px-6 py-3 text-white font-semibold rounded-lg shadow-md transition duration-300 ease-in-out flex items-center justify-center"
+                                    :class="messageSent ? 'bg-green-600' : 'accent-bg-primary hover:bg-amber-700'"
+                                    @click.prevent="
+                                        // Simple client-side form logic placeholder
+                                        messageSent = true;
+                                        setTimeout(() => {
+                                            messageSent = false;
+                                            document.getElementById('contact-form').reset();
+                                        }, 3000)
+                                    "
+                                >
+                                    <span x-show="!messageSent">Send Message</span>
+                                    <span x-show="messageSent">Message Sent! <i data-feather="check-circle" class="w-4 h-4 ml-2"></i></span>
+                                </button>
+                                <p x-show="messageSent" class="text-center mt-3 text-green-600 text-sm" x-transition>Thank you for reaching out!</p>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+
+        <!-- BLOG LIST VIEW: Interactive Destinations/Stories Showcase -->
+        <section id="blog-list" x-show="currentPage === 'blog-list'" class="py-20 lg:py-32 bg-white" x-cloak>
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16" data-aos="fade-up">
+                    <h2 class="text-4xl lg:text-5xl font-extrabold font-serif-custom text-gray-900">📚 All Travel Stories</h2>
+                    <p class="mt-3 text-xl text-gray-600">Deep dives and rich narratives from every corner I've explored.</p>
+                </div>
+
+                <!-- Filtering and Sorting UI -->
+                <div class="bg-gray-50 p-6 rounded-xl shadow-inner border border-gray-200 mb-12" data-aos="fade-up" data-aos-delay="100">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Search Bar -->
+                        <div class="md:col-span-1">
+                            <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search Story/Location</label>
+                            <div class="relative">
+                                <input x-model.debounce.300ms="searchTerm" type="text" id="search" placeholder="E.g., Victoria or Peaks" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500 transition duration-150">
+                                <i data-feather="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+                            </div>
+                        </div>
+
+                        <!-- Category Filter -->
+                        <div class="md:col-span-1">
+                            <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Filter by Category</label>
+                            <select x-model="activeCategory" id="category" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-amber-500 focus:border-amber-500 transition duration-150 appearance-none">
+                                <option value="All">All Categories</option>
+                                <template x-for="category in categories" :key="category">
+                                    <option :value="category" x-text="category"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <!-- Sorting -->
+                        <div class="md:col-span-1">
+                            <label for="sort" class="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+                            <select x-model="sortKey" id="sort" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-amber-500 focus:border-amber-500 transition duration-150 appearance-none">
+                                <option value="name">Alphabetical</option>
+                                <option value="priority">Recent Visit</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Destination Cards Grid -->
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <template x-for="story in filteredStories" :key="story.name">
+                        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition duration-300 overflow-hidden border border-gray-100 transform hover:-translate-y-1 cursor-pointer" @click="showStoryDetail(story)" data-aos="fade-up" data-aos-delay="200">
+                            <img :src="story.images[0].src" :alt="story.name" class="w-full h-56 object-cover">
+                            <div class="p-6">
+                                <span class="inline-block text-xs font-semibold py-1 px-3 rounded-full uppercase"
+                                    :class="{
+                                        'bg-green-100 text-green-800': story.category === 'National Parks & Wildlife',
+                                        'bg-blue-100 text-blue-800': story.category === 'Lakes & Waterfalls',
+                                        'bg-red-100 text-red-800': story.category === 'Mountains & Peaks'
+                                    }"
+                                    x-text="story.category">
+                                </span>
+                                <h4 class="text-2xl font-bold font-serif-custom mt-2" x-text="story.name"></h4>
+                                <p class="text-gray-600 mt-2 text-sm" x-text="story.intro"></p>
+                                <button class="mt-4 inline-flex items-center text-sm font-medium accent-primary hover:text-amber-700 transition duration-150">
+                                    Read Full Story
+                                    <i data-feather="arrow-right" class="w-4 h-4 ml-1"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Empty State -->
+                    <div x-show="filteredStories.length === 0" class="md:col-span-3 text-center p-12 bg-gray-50 rounded-xl border-dashed border-2 border-gray-300">
+                        <i data-feather="x-circle" class="w-10 h-10 mx-auto text-gray-500 mb-4"></i>
+                        <p class="text-xl font-semibold text-gray-700">No stories match your criteria.</p>
+                        <p class="text-gray-500 mt-2">Try adjusting your search term or filter settings.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- STORY DETAIL VIEW: Comprehensive Destination Story -->
+        <section id="story-detail" x-show="currentPage === 'storyDetail' && currentStory" class="py-16 lg:py-24 bg-white" x-cloak>
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+                <!-- Breadcrumb / Back Link -->
+                <button @click="navigate('blog-list')" class="inline-flex items-center text-gray-600 hover:accent-primary mb-8 transition duration-150">
+                    <i data-feather="arrow-left" class="w-4 h-4 mr-1"></i> Back to All Stories
+                </button>
+
+                <!-- Header -->
+                <header class="text-center mb-12">
+                    <span class="inline-block text-sm font-semibold py-1 px-4 rounded-full uppercase"
+                        :class="{
+                            'bg-green-100 text-green-800': currentStory.category === 'National Parks & Wildlife',
+                            'bg-blue-100 text-blue-800': currentStory.category === 'Lakes & Waterfalls',
+                            'bg-red-100 text-red-800': currentStory.category === 'Mountains & Peaks'
+                        }"
+                        x-text="currentStory.category">
+                    </span>
+                    <h1 class="text-4xl lg:text-6xl font-extrabold font-serif-custom text-gray-900 mt-4" x-text="currentStory.name"></h1>
+                    <p class="mt-3 text-xl text-gray-600 italic" x-text="currentStory.intro"></p>
+                    <div class="mt-4 text-gray-500 text-sm">
+                        By George Ngugi Mwangi | Published <span x-text="currentStory.date"></span>
+                    </div>
+                </header>
+
+                <!-- Main Content Grid -->
+                <div class="lg:grid lg:grid-cols-12 lg:gap-10">
+
+                    <!-- Left Column: Storytelling, Highlights, Activities (8/12 width) -->
+                    <div class="lg:col-span-8 space-y-10">
+
+                        <!-- Photo Gallery -->
+                        <div x-data="{ activeImage: currentStory.images[0], likeCount: 120, isLiked: false, shareText: 'Share Story' }" class="bg-gray-100 p-4 rounded-xl shadow-lg">
+
+                            <!-- Main Image -->
+                            <div class="relative mb-4 rounded-lg overflow-hidden h-96">
+                                <img :src="activeImage.src" :alt="activeImage.caption" class="w-full h-full object-cover transition-transform duration-500 ease-in-out transform hover:scale-105">
+                                <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-40 p-3 text-white text-sm italic" x-text="activeImage.caption"></div>
+                            </div>
+
+                            <!-- Thumbnails -->
+                            <div class="flex space-x-3 overflow-x-auto pb-2">
+                                <template x-for="image in currentStory.images" :key="image.src">
+                                    <img :src="image.src" :alt="image.caption"
+                                         @click="activeImage = image"
+                                         class="w-20 h-20 object-cover rounded-md cursor-pointer border-2 transition duration-200"
+                                         :class="{'border-amber-600 ring-2 ring-amber-300': activeImage.src === image.src, 'border-transparent hover:border-amber-300': activeImage.src !== image.src}">
+                                </template>
+                            </div>
+
+                            <!-- Like/Share Buttons -->
+                            <div class="flex items-center justify-center space-x-4 mt-6 border-t border-gray-200 pt-4">
+                                <button @click="isLiked = !isLiked; likeCount += (isLiked ? 1 : -1)"
+                                    class="flex items-center px-4 py-2 rounded-full transition duration-300"
+                                    :class="isLiked ? 'bg-red-500 text-white' : 'bg-white border border-gray-300 text-gray-700 hover:bg-red-50 hover:text-red-600'">
+                                    <i :data-feather="isLiked ? 'heart' : 'heart'" class="w-5 h-5 mr-2 fill-current"></i>
+                                    <span x-text="likeCount"></span>
+                                </button>
+                                <button @click="shareText = 'Copied!'; setTimeout(() => shareText = 'Share Story', 2000)"
+                                    class="flex items-center bg-white border border-gray-300 text-gray-700 hover:bg-amber-50 hover:accent-primary px-4 py-2 rounded-full transition duration-300">
+                                    <i data-feather="share-2" class="w-5 h-5 mr-2"></i>
+                                    <span x-text="shareText">Share Story</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Storytelling Section -->
+                        <div class="space-y-6 text-lg text-gray-700">
+                            <h2 class="text-3xl font-bold font-serif-custom accent-secondary">The Full Narrative</h2>
+                            <template x-for="paragraph in currentStory.story" :key="paragraph.content.substring(0, 20)">
+                                <p x-text="paragraph.content"></p>
+                            </template>
+                        </div>
+
+                        <!-- Highlights & Activities -->
+                        <div class="grid md:grid-cols-2 gap-8 pt-6 border-t border-gray-200">
+                            <div>
+                                <h3 class="text-2xl font-bold font-serif-custom accent-primary mb-4 flex items-center">
+                                    <i data-feather="zap" class="w-6 h-6 mr-2"></i> Top Highlights
+                                </h3>
+                                <ul class="space-y-2 list-disc pl-5">
+                                    <template x-for="highlight in currentStory.highlights" :key="highlight">
+                                        <li x-text="highlight" class="text-gray-700"></li>
+                                    </template>
+                                </ul>
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-bold font-serif-custom accent-primary mb-4 flex items-center">
+                                    <i data-feather="activity" class="w-6 h-6 mr-2"></i> Must-Do Activities
+                                </h3>
+                                <ul class="space-y-2 list-disc pl-5">
+                                    <template x-for="activity in currentStory.activities" :key="activity">
+                                        <li x-text="activity" class="text-gray-700"></li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Right Column: Sticky Sidebar (4/12 width) -->
+                    <div class="lg:col-span-4 mt-10 lg:mt-0 story-sidebar-sticky">
+
+                        <!-- Quick Facts / Travel Tips -->
+                        <div class="p-6 bg-amber-50 rounded-xl shadow-lg border border-amber-200 space-y-6">
+                            <h3 class="text-2xl font-bold font-serif-custom text-gray-900 flex items-center">
+                                <i data-feather="bookmark" class="w-6 h-6 mr-2 accent-primary"></i> Travel Quick Facts
+                            </h3>
+                            <div class="space-y-3">
+                                <p class="flex justify-between border-b pb-1">
+                                    <span class="font-semibold text-gray-700">Best Time to Visit:</span>
+                                    <span x-text="currentStory.quickFacts.bestTime" class="text-right"></span>
+                                </p>
+                                <p class="flex justify-between border-b pb-1">
+                                    <span class="font-semibold text-gray-700">Difficulty Level:</span>
+                                    <span x-text="currentStory.quickFacts.difficulty" class="text-right"></span>
+                                </p>
+                                <p class="flex justify-between border-b pb-1">
+                                    <span class="font-semibold text-gray-700">Accommodation:</span>
+                                    <span x-text="currentStory.quickFacts.accommodation" class="text-right"></span>
+                                </p>
+                                <p class="flex justify-between border-b pb-1">
+                                    <span class="font-semibold text-gray-700">Transportation:</span>
+                                    <span x-text="currentStory.quickFacts.transportation" class="text-right"></span>
+                                </p>
+                                <p class="flex justify-between border-b pb-1">
+                                    <span class="font-semibold text-gray-700">Cost Estimate:</span>
+                                    <span x-text="currentStory.quickFacts.costEstimate" class="text-right"></span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Related Destinations -->
+                        <div class="p-6 bg-white rounded-xl shadow-lg border border-gray-100 mt-8">
+                            <h3 class="text-2xl font-bold font-serif-custom accent-secondary mb-4 flex items-center">
+                                <i data-feather="link" class="w-6 h-6 mr-2"></i> Related Adventures
+                            </h3>
+                            <ul class="space-y-3">
+                                <template x-for="relatedName in currentStory.related" :key="relatedName">
+                                    <li class="border-b border-gray-100 last:border-b-0 pb-2">
+                                        <button @click="showStoryDetail(findStoryByName(relatedName))" class="text-gray-700 hover:accent-primary font-medium transition duration-150 text-left">
+                                            <i data-feather="chevrons-right" class="w-4 h-4 inline-block mr-1"></i> <span x-text="relatedName"></span>
+                                        </button>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p class="text-2xl font-extrabold font-serif-custom mb-3 accent-primary">My Travel Diary</p>
+            <p class="text-sm text-gray-400">“The journey toward the unknown is always the most rewarding.”</p>
+            <p class="text-sm text-gray-400 mt-4">&copy; 2025 George Ngugi Mwangi. All rights reserved.</p>
+        </div>
+    </footer>
+
+
+    <!-- Load AOS and Swiper JS -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+
+    <!-- Load Feather Icons JS -->
+    <script src="https://unpkg.com/feather-icons"></script>
+
+    <!-- Load Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Main Application Script -->
+    <script>
+        // 1. Alpine.js Component for Entire Application
+        function app() {
+            return {
+                // Global State
+                mobileMenuOpen: false,
+                currentPage: 'home', // 'home', 'blog-list', 'storyDetail'
+                currentStory: null,
+
+                // Blog List Filtering/Sorting State
+                searchTerm: '',
+                activeCategory: 'All',
+                sortKey: 'name',
+                categories: ['National Parks & Wildlife', 'Lakes & Waterfalls', 'Mountains & Peaks'],
+
+                // Static Data
+                allStories: [
+                    {
+                        name: 'Masai Mara: Witnessing the Great Migration',
+                        intro: 'The rumble of hooves, the dust rising to meet the African sun—this is the Great Migration, and standing in the Mara triangle is an experience that changes you forever.',
+                        category: 'National Parks & Wildlife',
+                        county: 'Narok',
+                        date: 'Oct 2, 2024',
+                        priority: 1,
+                        story: [
+                            { type: 'paragraph', content: 'The first chapter of our Mara journey began at dawn. The air was crisp, the savanna stretched out in an endless blanket of gold, and the anticipation was palpable. Our guide, Joseph, a man whose knowledge of the plains rivaled a university library, pointed to the faint tracks. This was it—the start of the Great Migration spectacle.' },
+                            { type: 'paragraph', content: 'Midday brought the action. We found ourselves right next to the famous Talek River crossing. Thousands of wildebeest gathered, anxious, yet driven by an ancient instinct. The tension was thick, broken only by the snorts of the nervous herd. Then, the first one jumped, and chaos erupted in a beautiful, primal display of life and death.' },
+                            { type: 'paragraph', content: 'Aside from the migration, the Mara delivered on the Big Five. We spent an hour with a magnificent lion pride, watching them laze under the scorching sun, totally unbothered by our presence. It was a humbling reminder of nature\'s power.'}
+                        ],
+                        quickFacts: { bestTime: 'July - October (Migration)', difficulty: 'Easy (Game Drives)', accommodation: 'Luxury Tented Camps', transportation: 'Daily flights from Nairobi (Wilson)', costEstimate: '$$$$' },
+                        highlights: ['River Crossing Spectacle', 'Big Five Guaranteed', 'Hot Air Balloon Safari'],
+                        activities: ['Morning and Evening Game Drives', 'Cultural Maasai Village Visits', 'Photography Tours'],
+                        images: [
+                            { src: 'https://placehold.co/800x600/047857/ffffff?text=Mara+Crossing+1', caption: 'The epic rush of the Talek River crossing.' },
+                            { src: 'https://placehold.co/800x600/047857/ffffff?text=Lion+Pride', caption: 'A majestic lioness keeping watch over her pride.' },
+                            { src: 'https://placehold.co/800x600/047857/ffffff?text=Mara+Sunset', caption: 'The stunning silhouette of an acacia tree at sunset.' },
+                            { src: 'https://placehold.co/800x600/047857/ffffff?text=Wildebeest+Herd', caption: 'A sea of wildebeest on the move.' }
+                        ],
+                        related: ['Amboseli: Kilimanjaro’s Shadow', 'Tsavo: Red Earth Giants']
+                    },
+                    {
+                        name: 'Mount Kenya: Summiting Africa’s Second Giant',
+                        intro: 'The ascent was brutal, but the view from Point Lenana, watching the sunrise paint the glaciers, made every frozen step worthwhile.',
+                        category: 'Mountains & Peaks',
+                        county: 'Various',
+                        date: 'Feb 14, 2024',
+                        priority: 2,
+                        story: [
+                            { type: 'paragraph', content: 'Trekking Mount Kenya is a challenge for both the body and soul. We chose the Sirimon-Chogoria route, offering varied scenery from dense bamboo forest to high-altitude moorland. The first day was a gentle introduction, but the cold quickly reminded us of the mountain\'s severity.' },
+                            { type: 'paragraph', content: 'The final push to Point Lenana started at 3 AM. Headlamps cut through the inky blackness, and the altitude began to bite. The air was thin, and every step was calculated. As we reached the peak, the sky exploded in a fusion of orange and purple. Below us, the rest of Africa was waking up.' },
+                            { type: 'paragraph', content: 'A truly magnificent place. It taught me patience, perseverance, and the sheer beauty of the high alpine environment. Highly recommend the Chogoria descent for its stunning gorges and waterfalls.'}
+                        ],
+                        quickFacts: { bestTime: 'Jan-Feb & Jul-Oct', difficulty: 'Hard (Altitude & Cold)', accommodation: 'Mountain Huts & Campsites', transportation: 'Road transfer from Nairobi', costEstimate: '$$$' },
+                        highlights: ['Point Lenana Sunrise', 'Naro Moru Gorges', 'Unique Alpine Flora'],
+                        activities: ['High-Altitude Trekking', 'Rock Climbing (Batian)', 'Photography'],
+                        images: [
+                            { src: 'https://placehold.co/800x600/D97706/ffffff?text=Lenana+Summit', caption: 'Watching the sunrise from Point Lenana.' },
+                            { src: 'https://placehold.co/800x600/D97706/ffffff?text=Alpine+Moorland', caption: 'The expansive and unique alpine moorland.' },
+                            { src: 'https://placehold.co/800x600/D97706/ffffff?text=Sirimon+Trail', caption: 'Starting the trek through the lower Sirimon forests.' }
+                        ],
+                        related: ['Aberdare Ranges: Waterfalls and Moorlands', 'Mount Elgon: Caves and Craters']
+                    },
+                    {
+                        name: 'Amboseli: Kilimanjaro’s Shadow',
+                        intro: 'A land defined by its enormous, tusked elephants and the iconic backdrop of Africa’s highest peak, Mount Kilimanjaro, rising majestically across the border.',
+                        category: 'National Parks & Wildlife',
+                        county: 'Kajiado',
+                        date: 'Apr 5, 2023',
+                        priority: 3,
+                        story: [
+                            { type: 'paragraph', content: 'Amboseli is different. It’s not just a game reserve; it’s a living painting dominated by the sheer scale of Kilimanjaro. The park is surprisingly small, but the open landscape makes wildlife viewing incredibly easy, especially the famous "Big Tuskers."' },
+                            { type: 'paragraph', content: 'We spent hours at the observation hill, watching the swampy areas—a magnet for elephants cooling off and bathing in the mud. The sheer size of the herds here is breathtaking, a successful conservation story unfolding before your eyes.'},
+                            { type: 'paragraph', content: 'Travel tip: Ensure you go early in the morning before the clouds roll in to get that iconic, unobstructed view of Kilimanjaro perfectly framed behind the grazing elephants.'}
+                        ],
+                        quickFacts: { bestTime: 'June - Oct (Dry)', difficulty: 'Easy', accommodation: 'Safari Lodges', transportation: 'Road or Air charter', costEstimate: '$$$' },
+                        highlights: ['Big Tuskers', 'Kilimanjaro View', 'Observation Hill'],
+                        activities: ['Game Drives', 'Bird Watching'],
+                        images: [
+                            { src: 'https://placehold.co/800x600/047857/ffffff?text=Amboseli+Elephant', caption: 'An elephant family grazing under the gaze of Kilimanjaro.' },
+                            { src: 'https://placehold.co/800x600/047857/ffffff?text=Amboseli+View', caption: 'The plains of Amboseli at sunrise.' },
+                        ],
+                        related: ['Masai Mara: Witnessing the Great Migration', 'Tsavo: Red Earth Giants']
+                    },
+                    // Simplified older data for compatibility/mocking
+                    { name: 'Lake Nakuru: Flamingo Pink', category: 'Lakes & Waterfalls', intro: 'A soda lake famous for its huge concentration of flamingos and rhino sanctuary.', county: 'Nakuru', date: 'Jul 20, 2023', priority: 5, story: [{type: 'paragraph', content: 'Amazing rhino sightings!'}], quickFacts: {}, highlights: [], activities: [], images: [{ src: 'https://placehold.co/400x250/3B82F6/ffffff?text=Lake+Nakuru', caption: 'Flamingoes on the lake' }], related: [] },
+                ],
+
+
+                // Initialization
+                init() {
+                    AOS.init({ duration: 800, once: true });
+                    this.initMap();
+
+                    // Re-initialize feather icons after DOM updates (like when switching views)
+                    this.$watch('currentPage', () => {
+                        this.$nextTick(() => {
+                            feather.replace();
+                            window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll to top on page change
+                        });
+                    });
+                     // Initial replacement after window load
+                    this.$nextTick(() => {
+                        feather.replace();
+                    });
+
+                    // Set up the Swiper for the gallery section (static)
+                    new Swiper('.mySwiper', {
+                        loop: true, slidesPerView: 1, spaceBetween: 30,
+                        breakpoints: { 640: { slidesPerView: 2, spaceBetween: 20 }, 1024: { slidesPerView: 3, spaceBetween: 30 } },
+                        pagination: { el: '.swiper-pagination', clickable: true },
+                        navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
+                    });
+                },
+
+                // Navigation/View Logic
+                navigate(page, anchor = null) {
+                    this.currentPage = page;
+                    this.currentStory = null;
+                    this.mobileMenuOpen = false;
+                    if (anchor) {
+                         // Use nextTick to allow x-show to run before scrolling
+                        this.$nextTick(() => {
+                            const element = document.getElementById(anchor);
+                            if (element) {
+                                element.scrollIntoView({ behavior: 'smooth' });
+                            }
+                        });
+                    }
+                },
+
+                // Story Detail View Transition
+                showStoryDetail(story) {
+                    this.currentStory = story;
+                    this.currentPage = 'storyDetail';
+                    this.mobileMenuOpen = false;
+                },
+
+                // Utility to find related stories
+                findStoryByName(name) {
+                    return this.allStories.find(story => story.name === name) || this.allStories[0]; // Fallback
+                },
+
+                // Computed Property (Getter) for Filtering and Sorting Blog List
+                get filteredStories() {
+                    let stories = this.allStories;
+
+                    // 1. Filtering by Category
+                    if (this.activeCategory !== 'All') {
+                        stories = stories.filter(s => s.category === this.activeCategory);
+                    }
+
+                    // 2. Searching
+                    if (this.searchTerm.length > 0) {
+                        const term = this.searchTerm.toLowerCase();
+                        stories = stories.filter(s =>
+                            s.name.toLowerCase().includes(term) ||
+                            s.intro.toLowerCase().includes(term) ||
+                            s.county.toLowerCase().includes(term)
+                        );
+                    }
+
+                    // 3. Sorting
+                    stories.sort((a, b) => {
+                        let comparison = 0;
+                        if (this.sortKey === 'name') {
+                            const nameA = a.name.toLowerCase();
+                            const nameB = b.name.toLowerCase();
+                            if (nameA > nameB) comparison = 1;
+                            else if (nameA < nameB) comparison = -1;
+                        } else if (this.sortKey === 'priority') {
+                            comparison = a.priority - b.priority; // Lower number is higher priority
+                        }
+                        return comparison;
+                    });
+
+                    return stories;
+                },
+
+                // Leaflet Map Initialization
+                initMap() {
+                    const mapContainer = document.getElementById('map-container');
+                    if (mapContainer) {
+                        const map = L.map('map-container').setView([0.0236, 37.9062], 6); // Centered over Kenya
+
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            maxZoom: 19,
+                            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                        }).addTo(map);
+
+                        const markers = [
+                            { lat: -1.7000, lng: 35.5000, name: "Masai Mara (Safari)" },
+                            { lat: 0.1500, lng: 37.3000, name: "Mount Kenya (Hiking)" },
+                            { lat: -0.5000, lng: 33.0000, name: "Lake Victoria (Lakeside)" },
+                            { lat: 0.5200, lng: 35.2600, name: "Eldoret (Home of Champions)" }
+                        ];
+
+                        markers.forEach(point => {
+                            L.marker([point.lat, point.lng])
+                                .addTo(map)
+                                .bindPopup(`<b>${point.name}</b>`)
+                                .openPopup();
+                        });
+                    }
+                }
+            }
+        }
+
+
+        // Global back-to-top button logic (outside Alpine for simplicity)
+        window.addEventListener('load', () => {
+             const backToTopButton = document.createElement('button');
+            backToTopButton.innerHTML = '<i data-feather="arrow-up" class="w-6 h-6"></i>';
+            backToTopButton.className = 'fixed bottom-5 right-5 p-3 rounded-full shadow-lg text-white accent-bg-primary transition-opacity duration-300 opacity-0 z-40';
+            backToTopButton.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.body.appendChild(backToTopButton);
+            feather.replace(); // Initial icon replacement
+
+            window.onscroll = function() {
+                if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
+                    backToTopButton.classList.remove('opacity-0');
+                } else {
+                    backToTopButton.classList.add('opacity-0');
+                }
+            };
+        });
+
+    </script>
+</body>
+</html>
